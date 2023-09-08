@@ -1,0 +1,52 @@
+---
+# tasks file for my_mysql_role
+
+- name: Install MySQL server
+  package:
+    name: mysql-server
+    state: present
+ 
+- name: Start MySQL service
+  service:
+    name: mysql
+    state: started
+    enabled: true
+    
+- name: Update apt-get repo and cache
+  apt: update_cache=yes force_apt_get=yes cache_valid_time=3600
+
+- name: Install python Mysql package #required for mysql_db tasks
+  apt: name=python3-mysqldb state=latest
+
+- name: Create a new MySQL database
+  mysql_db:
+    login_unix_socket: /var/run/mysqld/mysqld.sock
+    login_user: root
+    login_host: localhost
+    name: user
+    state: present
+    collation: utf8_general_ci
+
+
+- name: Create a MySQL user
+  mysql_user:
+    login_unix_socket: /var/run/mysqld/mysqld.sock
+    login_user: root
+    login_host: localhost
+    name: demo
+    password: demo
+    priv: '*.*:ALL'
+    state: present
+
+- name: Copy sample data
+  copy: src=dump.sql dest=/tmp/dump.sql
+
+- name: Insert sample data
+  shell: cat /tmp/dump.sql | mysql -u demo -pdemo demo
+
+- name: Restart Apache
+  service: name=apache2 state=restarted
+
+- name: Install Hello World PHP script with database
+  copy: src=db.php dest=/var/www/html/db.php mode=0664
+
